@@ -1,1 +1,1 @@
-#### Automaton cellular with pygame
+# Automaton cellular with pygame
