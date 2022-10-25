@@ -1,40 +1,34 @@
 import pygame
+import itertools
 
 pygame.init()
 
-
 # FIXME: the fps are too low (5fps)
-def check_rules(rects: dict[tuple[int, int]: pygame.Rect], grid):
+def check_rules(rects: dict[tuple[int, int]: pygame.Rect], grid) \
+                -> dict[tuple[int, int]: pygame.Rect]:
     """
     Check the rules of Conway's Game of Life
     """
+    permutations = list(itertools.permutations((0, 1, -1), 2))
+    permutations += [(1, 1), (-1, -1)]
+
     new_dict = dict()
     for k, v in grid.items():
         count = 0
         alive = False
-        if k in rects.keys():
+        if rects.get(k, False):
             alive = True
+        for i in range(len(permutations)):
+            if count > 3:
+                break
+            count += rects.get((k[0]+permutations[i][0], k[1]+permutations[i][1]), False)
 
-        if rects.get((k[0]-1, k[1]-1)):
-            count += 1
-        if rects.get((k[0]-1, k[1])):
-            count += 1
-        if rects.get((k[0]+1, k[1])):
-            count += 1
-        if rects.get((k[0], k[1]-1)):
-            count += 1
-        if rects.get((k[0], k[1]+1)):
-            count += 1
-        if rects.get((k[0]-1, k[1]+1)):
-            count += 1
-        if rects.get((k[0]+1, k[1]-1)):
-            count += 1
-        if rects.get((k[0]+1, k[1]+1)):
-            count += 1
         if (count == 2 or count == 3) and alive:
-            new_dict[k] = v
+            new_dict[k] = True
         elif count == 3 and not alive:
-            new_dict[k] = v
+            new_dict[k] = True
+        else:
+            new_dict[k] = False
     return new_dict
 
 
@@ -60,9 +54,10 @@ def update_grid_size(size: tuple[int, int], rect_size: int) -> tuple[int, int]:
 
 def get_mouse_pos_grid(rect_size: int) -> tuple[int, int]:
     mouse_pos = pygame.mouse.get_pos()
-    pos = (round(mouse_pos[0]//rect_size)*rect_size,
-           round(mouse_pos[1]//rect_size)*rect_size)
+    pos = (round(mouse_pos[0]//rect_size),
+           round(mouse_pos[1]//rect_size))
     return pos
+
 
 # FIXME: it break completely cell's logic
 def update_rect_size(rects: dict[tuple[int, int]: pygame.Rect],
@@ -97,6 +92,16 @@ def draw_grid(size: tuple[int, int],
     return surface
 
 
+def create_surface(size: tuple[int, int],
+                   rects: list[pygame.Rect],
+                   color: tuple[int, int, int]) \
+                   -> pygame.Surface:
+    surf = pygame.Surface(size)
+    for rect in rects:
+        pygame.draw.rect(surf, color, rect)
+    return surf
+
+
 screen = pygame.display.set_mode((1080, 720))
 
 clock = pygame.time.Clock()
@@ -112,6 +117,8 @@ grid = grid_generation(rect_size, grid_size)
 rects = dict()
 lmb_pressed = False
 rmb_pressed = False
+
+finished = False
 
 # The grid is static, just draw it once
 grid_surf = draw_grid(screen.get_size(), grid_size, rect_size)
@@ -136,9 +143,7 @@ while run:
         if event.type == pygame.MOUSEBUTTONDOWN:
             # FIXME: wheeling up or down doesn't change the grid
             if event.button == 4:  # Mouse wheel up
-                print(rects)
                 rects = update_rect_size(rects, rect_size, rect_size+1)
-                print(rects)
                 rect_size += 1
                 grid_size = update_grid_size(screen.get_size(), rect_size)
                 grid = grid_generation(rect_size, grid_size)
@@ -156,29 +161,44 @@ while run:
 
     if lmb_pressed:
         pos = get_mouse_pos_grid(rect_size)
-        print(pos)
-        rects[(pos[0]//rect_size, pos[1]//rect_size)] = pygame.Rect(*pos,
-                                                                    rect_size,
-                                                                    rect_size)
-
+        rects[pos] = True
+        # pygame.Rect(*pos,
+        #         rect_size,
+        #         rect_size)
     if rmb_pressed:
         pos = get_mouse_pos_grid(rect_size)
-        rects.pop((pos[0]//rect_size, pos[1]//rect_size), "KeyNotFound")
+        rects[pos] = False
+        # rects.pop((pos[0]//rect_size, pos[1]//rect_size), "KeyNotFound")
 
-    if started:
-        pygame.time.wait(100)
+    if started and not finished:
+        pygame.time.wait(0)
+        temp_dict = rects.copy()
         rects = check_rules(rects, grid)
+
+        # Create a surface when rects are static for optimizing performance
+        if temp_dict == rects:
+            finished = True
+            rects_list = []
+            for pos, to_draw in rects.items():
+                if to_draw:
+                    rects_list.append(grid[pos])
+            rects_surface = create_surface(screen.get_size(),
+                                           rects_list,
+                                           (0, 255, 0))
+            rects_surface.set_colorkey((0, 0, 0))
+            del temp_dict
+            del rects_list
 
     screen.fill((0, 0, 0))
 
     screen.blit(grid_surf, (0, 0))
 
-    for rect in rects.values():
-        print(rect)
-        pygame.draw.rect(screen, (0, 255, 0), pygame.Rect(rect.x,
-                                                          rect.y,
-                                                          rect.size[0],
-                                                          rect.size[1]))
+    if not finished:
+        for pos, rect in grid.items():
+            if rects.get(pos, False):
+                pygame.draw.rect(screen, (0, 255, 0), grid[pos])
+    else:
+        screen.blit(rects_surface, (0, 0))
 
     pygame.display.flip()
     clock.tick(60)
