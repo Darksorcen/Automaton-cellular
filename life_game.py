@@ -4,9 +4,9 @@ import itertools
 pygame.init()
 
 
-# FIXME: the fps are too low (5fps)
-def check_rules(rects: dict[tuple[int, int]: pygame.Rect], grid) \
-                -> dict[tuple[int, int]: pygame.Rect]:
+def check_rules(rects: dict[tuple[int, int]: bool],
+                grid: dict[tuple[int, int], pygame.Rect]) \
+                -> dict[tuple[int, int]: bool]:
     """
     Check the rules of Conway's Game of Life
     """
@@ -34,7 +34,7 @@ def check_rules(rects: dict[tuple[int, int]: pygame.Rect], grid) \
     return new_dict
 
 
-def grid_generation(rect_size: int,
+def grid_generation(rsize: int,
                     grid_size: tuple[int, int]) \
                     -> dict[tuple[int, int]: pygame.Rect]:
     """
@@ -43,55 +43,55 @@ def grid_generation(rect_size: int,
     grid = {}
     for y in range(grid_size[1]):
         for x in range(grid_size[0]):
-            grid[(x, y)] = pygame.Rect(x*rect_size,
-                                       y*rect_size,
-                                       rect_size,
-                                       rect_size)
+            grid[(x, y)] = pygame.Rect(x*rsize,
+                                       y*rsize,
+                                       rsize,
+                                       rsize)
     return grid
 
 
-def update_grid_size(size: tuple[int, int], rect_size: int) -> tuple[int, int]:
-    return (size[0]//rect_size, size[1]//rect_size)
+def update_grid_size(size: tuple[int, int], rsize: int) -> tuple[int, int]:
+    return (size[0]//rsize, size[1]//rsize)
 
 
-def get_mouse_pos_grid(rect_size: int) -> tuple[int, int]:
+def get_mouse_pos_grid(rsize: int) -> tuple[int, int]:
     mouse_pos = pygame.mouse.get_pos()
-    pos = (round(mouse_pos[0]//rect_size),
-           round(mouse_pos[1]//rect_size))
+    pos = (round(mouse_pos[0]//rsize),
+           round(mouse_pos[1]//rsize))
     return pos
 
 
 # FIXME: it break completely cell's logic
-def update_rect_size(rects: dict[tuple[int, int]: pygame.Rect],
-                     old_rect_size: int, new_rect_size: int) \
-                     -> dict[tuple[int, int]: pygame.Rect]:
+def update_rsize(rects: dict[tuple[int, int]: bool],
+                 old_rsize: int,
+                 new_rsize: int) \
+                 -> dict[tuple[int, int]: bool]:
     new_rects = dict()
-    for pos, r in rects.items():
-        temp_tuple = (pos[0]*old_rect_size//new_rect_size,
-                      pos[1]*old_rect_size//new_rect_size)
+    for pos in rects.keys():
+        # temp_tuple = (pos[0]*old_rsize//new_rsize,
+        #               pos[1]*old_rsize//new_rsize)
+        # print(temp_tuple, pos)
+        # new_rects[temp_tuple] = rects.get(pos, False)
+        new_rects[pos] = rects.get(pos, False)
 
-        new_rects[temp_tuple] = pygame.Rect(r.x//old_rect_size*new_rect_size,
-                                            r.y//old_rect_size*new_rect_size,
-                                            new_rect_size,
-                                            new_rect_size)
     return new_rects
 
 
 def draw_grid(size: tuple[int, int],
               grid_size: tuple[int, int],
-              rect_size: int) \
+              rsize: int) \
               -> pygame.Surface:
     surface = pygame.Surface(size)
     for x in range(grid_size[0]):
         for y in range(grid_size[1]):
             pygame.draw.line(surface,
                              (90, 90,  90),
-                             [0, y*rect_size],
-                             [grid_size[0]*rect_size, y*rect_size])
+                             [0, y*rsize],
+                             [grid_size[0]*rsize, y*rsize])
         pygame.draw.line(surface,
                          (90, 90, 90),
-                         [x*rect_size, 0],
-                         [x*rect_size, grid_size[1]*rect_size])
+                         [x*rsize, 0],
+                         [x*rsize, grid_size[1]*rsize])
     return surface
 
 
@@ -111,11 +111,14 @@ clock = pygame.time.Clock()
 run = True
 
 started = False
-rect_size = 10
-grid_size = update_grid_size(screen.get_size(), rect_size)
+rsize = 10  # rect size
+rsize_min = 8
+rsize_max = 20
+
+grid_size = update_grid_size(screen.get_size(), rsize)
 
 # Generate all rects in the grid
-grid = grid_generation(rect_size, grid_size)
+grid = grid_generation(rsize, grid_size)
 
 # {(posx, posy): bool}
 rects = dict()
@@ -126,7 +129,7 @@ rmb_pressed = False
 finished = False
 
 # The grid is static, just draw it once
-grid_surf = draw_grid(screen.get_size(), grid_size, rect_size)
+grid_surf = draw_grid(screen.get_size(), grid_size, rsize)
 
 waiting_time = 0
 
@@ -148,18 +151,23 @@ while run:
                 rmb_pressed = True
 
         if event.type == pygame.MOUSEBUTTONDOWN:
-            # FIXME: wheeling up or down doesn't change the grid
-            if event.button == 4:  # Mouse wheel up
-                rects = update_rect_size(rects, rect_size, rect_size+1)
-                rect_size += 1
-                grid_size = update_grid_size(screen.get_size(), rect_size)
-                grid = grid_generation(rect_size, grid_size)
-            elif event.button == 5:  # Mouse wheel down
-                rects = update_rect_size(rects, rect_size, rect_size-1)
-                rect_size -= 1
-                grid_size = update_grid_size(screen.get_size(), rect_size)
-                grid = grid_generation(rect_size, grid_size)
+            # FIXED: wheeling up or down doesn't change the grid
+            if event.button == 4 and rsize < rsize_max:  # Mouse wheel up
+                rsize += 1
+                #rects = update_rsize(rects, rsize-1, rsize)
 
+                grid_size = update_grid_size(screen.get_size(), rsize)
+                grid = grid_generation(rsize, grid_size)
+
+                grid_surf = draw_grid(screen.get_size(), grid_size, rsize)
+            elif event.button == 5 and rsize > rsize_min:  # Mouse wheel down
+                rsize -= 1
+                #rects = update_rsize(rects, rsize+1, rsize)
+
+                grid_size = update_grid_size(screen.get_size(), rsize)
+                grid = grid_generation(rsize, grid_size)
+
+                grid_surf = draw_grid(screen.get_size(), grid_size, rsize)
         if event.type == pygame.MOUSEBUTTONUP and not started:
             if event.button == 1:
                 lmb_pressed = False
@@ -167,15 +175,14 @@ while run:
                 rmb_pressed = False
 
     if lmb_pressed:
-        pos = get_mouse_pos_grid(rect_size)
+        pos = get_mouse_pos_grid(rsize)
         rects[pos] = True
         # pygame.Rect(*pos,
-        #         rect_size,
-        #         rect_size)
+        #         rsize,
+        #         rsize)
     if rmb_pressed:
-        pos = get_mouse_pos_grid(rect_size)
+        pos = get_mouse_pos_grid(rsize)
         rects[pos] = False
-        # rects.pop((pos[0]//rect_size, pos[1]//rect_size), "KeyNotFound")
 
     if started and not finished:
         pygame.time.wait(waiting_time)
@@ -209,4 +216,4 @@ while run:
 
     pygame.display.flip()
     clock.tick(60)
-    print(clock.get_fps())
+    #print(clock.get_fps())
