@@ -3,6 +3,7 @@ import itertools
 
 pygame.init()
 
+
 # FIXME: the fps are too low (5fps)
 def check_rules(rects: dict[tuple[int, int]: pygame.Rect], grid) \
                 -> dict[tuple[int, int]: pygame.Rect]:
@@ -21,7 +22,8 @@ def check_rules(rects: dict[tuple[int, int]: pygame.Rect], grid) \
         for i in range(len(permutations)):
             if count > 3:
                 break
-            count += rects.get((k[0]+permutations[i][0], k[1]+permutations[i][1]), False)
+            pos_to_get = (k[0]+permutations[i][0], k[1]+permutations[i][1])
+            count += rects.get(pos_to_get, 0)
 
         if (count == 2 or count == 3) and alive:
             new_dict[k] = True
@@ -67,6 +69,7 @@ def update_rect_size(rects: dict[tuple[int, int]: pygame.Rect],
     for pos, r in rects.items():
         temp_tuple = (pos[0]*old_rect_size//new_rect_size,
                       pos[1]*old_rect_size//new_rect_size)
+
         new_rects[temp_tuple] = pygame.Rect(r.x//old_rect_size*new_rect_size,
                                             r.y//old_rect_size*new_rect_size,
                                             new_rect_size,
@@ -114,7 +117,9 @@ grid_size = update_grid_size(screen.get_size(), rect_size)
 # Generate all rects in the grid
 grid = grid_generation(rect_size, grid_size)
 
+# {(posx, posy): bool}
 rects = dict()
+
 lmb_pressed = False
 rmb_pressed = False
 
@@ -122,6 +127,8 @@ finished = False
 
 # The grid is static, just draw it once
 grid_surf = draw_grid(screen.get_size(), grid_size, rect_size)
+
+waiting_time = 0
 
 while run:
     for event in pygame.event.get():
@@ -171,7 +178,7 @@ while run:
         # rects.pop((pos[0]//rect_size, pos[1]//rect_size), "KeyNotFound")
 
     if started and not finished:
-        pygame.time.wait(0)
+        pygame.time.wait(waiting_time)
         temp_dict = rects.copy()
         rects = check_rules(rects, grid)
 
