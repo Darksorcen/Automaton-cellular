@@ -1,5 +1,7 @@
 import pygame
+import sys
 import itertools
+import utils
 
 pygame.init()
 
@@ -55,26 +57,13 @@ def update_grid_size(size: tuple[int, int], rsize: int) -> tuple[int, int]:
 
 
 def get_mouse_pos_grid(rsize: int) -> tuple[int, int]:
+    """
+    Convert mouse positions to grid pos [0, SCREEN_SIZE//rect_size]
+    """
     mouse_pos = pygame.mouse.get_pos()
-    pos = (round(mouse_pos[0]//rsize),
-           round(mouse_pos[1]//rsize))
+    pos = (mouse_pos[0]//rsize,
+           mouse_pos[1]//rsize)
     return pos
-
-
-# FIXME: it break completely cell's logic
-def update_rsize(rects: dict[tuple[int, int]: bool],
-                 old_rsize: int,
-                 new_rsize: int) \
-                 -> dict[tuple[int, int]: bool]:
-    new_rects = dict()
-    for pos in rects.keys():
-        # temp_tuple = (pos[0]*old_rsize//new_rsize,
-        #               pos[1]*old_rsize//new_rsize)
-        # print(temp_tuple, pos)
-        # new_rects[temp_tuple] = rects.get(pos, False)
-        new_rects[pos] = rects.get(pos, False)
-
-    return new_rects
 
 
 def draw_grid(size: tuple[int, int],
@@ -137,10 +126,12 @@ while run:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             run = False
+            sys.exit()
 
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_ESCAPE:
                 run = False
+                sys.exit()
             if event.key == pygame.K_SPACE:
                 started = True
 
@@ -154,19 +145,15 @@ while run:
             # FIXED: wheeling up or down doesn't change the grid
             if event.button == 4 and rsize < rsize_max:  # Mouse wheel up
                 rsize += 1
-                #rects = update_rsize(rects, rsize-1, rsize)
 
                 grid_size = update_grid_size(screen.get_size(), rsize)
                 grid = grid_generation(rsize, grid_size)
-
                 grid_surf = draw_grid(screen.get_size(), grid_size, rsize)
             elif event.button == 5 and rsize > rsize_min:  # Mouse wheel down
                 rsize -= 1
-                #rects = update_rsize(rects, rsize+1, rsize)
 
                 grid_size = update_grid_size(screen.get_size(), rsize)
                 grid = grid_generation(rsize, grid_size)
-
                 grid_surf = draw_grid(screen.get_size(), grid_size, rsize)
         if event.type == pygame.MOUSEBUTTONUP and not started:
             if event.button == 1:
@@ -177,9 +164,7 @@ while run:
     if lmb_pressed:
         pos = get_mouse_pos_grid(rsize)
         rects[pos] = True
-        # pygame.Rect(*pos,
-        #         rsize,
-        #         rsize)
+
     if rmb_pressed:
         pos = get_mouse_pos_grid(rsize)
         rects[pos] = False
@@ -214,6 +199,7 @@ while run:
     else:
         screen.blit(rects_surface, (0, 0))
 
+    screen.blit(utils.debug_info(f"{clock.get_fps():.1f}"), (10, 10))
+
     pygame.display.flip()
     clock.tick(60)
-    #print(clock.get_fps())
