@@ -3,10 +3,12 @@ import pygame
 
 class Grid:
     def __init__(self, screen_size: tuple[int, int], rsize: int):
-        self.size = self.update_grid_size(screen_size, rsize)
-        self.grid = self.generation(rsize)
+        # {(posx, posy): pygame.Rect}
+        self._grid = dict()
+        self.size = tuple()
+        self.update(screen_size, rsize)
 
-    def generation(self, rsize: int) -> dict[tuple[int, int]: pygame.Rect]:
+    def generation(self, rsize: int):
         """
         Generate a grid of rects
         """
@@ -17,7 +19,7 @@ class Grid:
                                            y*rsize,
                                            rsize,
                                            rsize)
-        return grid
+        self._grid = grid
 
     def update_grid_size(self, size: tuple[int, int], rsize: int) \
             -> tuple[int, int]:
@@ -58,6 +60,10 @@ class Grid:
         """
         Render the grid onto the screen
         """
-        for pos, rect in self.grid.items():
+        for pos, rect in self._grid.items():
             if rects.get(pos, False):
-                pygame.draw.rect(screen, rect_color, self.grid[pos])
+                pygame.draw.rect(screen, rect_color, self._grid[pos])
+
+    def update(self, screen_size, rsize):
+        self.size = self.update_grid_size(screen_size, rsize)
+        self.generation(rsize)  # FIXME: update grid
