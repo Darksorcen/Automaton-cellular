@@ -44,11 +44,14 @@ class Simulation:
         self.deserializer.read_json("data/simulation.json")
         self.data = self.deserializer.deserialize()
 
+        self.start_superimpose = False
+
     def after_process(self):
         self.serializer.convert_data(self.solver.rects)
         self.serializer.write_to_json("data/simulation.json")
 
     def handle_events(self):
+        # FIXME: cyclomatic complexity is too high
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 self.running = False
@@ -63,6 +66,7 @@ class Simulation:
                     self.started = True
 
                 if event.key == pygame.K_o:
+                    self.start_superimpose = True
                     self.solver.add_new_rects(self.data)
 
             if event.type == pygame.MOUSEBUTTONDOWN and not self.started:
@@ -72,17 +76,21 @@ class Simulation:
                     self.rmb_pressed = True
 
             if event.type == pygame.MOUSEBUTTONDOWN:
-                if event.button == 4 and self.rsize < self.rsize_max:  # Mouse wheel up
+                # Mouse wheel up
+                if event.button == 4 and self.rsize < self.rsize_max:
                     self.rsize += 1
 
                     self.grid.update(self.SCREEN_SIZE, self.rsize)
-                    self.grid_surf = self.grid.get_surf(self.SCREEN_SIZE, self.rsize)
+                    self.grid_surf = self.grid.get_surf(self.SCREEN_SIZE,
+                                                        self.rsize)
 
-                elif event.button == 5 and self.rsize > self.rsize_min:  # Mouse wheel down
+                # Mouse wheel down
+                elif event.button == 5 and self.rsize > self.rsize_min:
                     self.rsize -= 1
 
                     self.grid.update(self.SCREEN_SIZE, self.rsize)
-                    self.grid_surf = self.grid.get_surf(self.SCREEN_SIZE, self.rsize)
+                    self.grid_surf = self.grid.get_surf(self.SCREEN_SIZE,
+                                                        self.rsize)
 
             if event.type == pygame.MOUSEBUTTONUP and not self.started:
                 if event.button == 1:
@@ -103,6 +111,10 @@ class Simulation:
             pygame.time.wait(self.waiting_time)
             self.solver.check_rules()
 
+        # FIXME: continue this
+        if self.start_superimpose:
+            pos = self.grid.get_mouse_pos_grid(self.rsize)
+            # self.data.keys()[len(self.data.keys())//2]
 
     def render(self):
         self.screen.fill((0, 0, 0))
@@ -116,14 +128,16 @@ class Simulation:
         pygame.display.flip()
 
     def run(self):
-        # FIXED: complexity is too high
         while self.running:
-            self.handle_events()
-            self.update()
             try:
+                self.handle_events()
+                self.update()
                 self.render()
             except pygame.error as e:
-                if e.args == ('display Surface quit',):
+                if e.args in (('display Surface quit',),
+                              ('video system not initialized',)):
                     break
+                else:
+                    print(e.args)
 
             self.clock.tick(60)
