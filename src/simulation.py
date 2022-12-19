@@ -41,7 +41,7 @@ class Simulation:
         self.serializer = Serializer()
         self.deserializer = Deserializer()
 
-        self.deserializer.read_json("assets/data/simulation.json")
+        self.deserializer.read_json("assets/data/glider_gun.json")
         self.data = self.deserializer.deserialize()
 
         self.start_superimpose = False
@@ -55,6 +55,20 @@ class Simulation:
     def after_process(self):
         self.serializer.convert_data(self.solver.rects, self.rsize)
         self.serializer.write_to_json("assets/data/simulation.json")
+
+    def calculate_positions_relative_to_center(self):
+        """
+        A method for calculating the new positions with respect to
+        the actual mouse position
+        It will make look like the squares loaded follow the mouse
+        """
+        dict_copy = dict()
+        for pos, v in self.data.items():
+            new_pos = (pos[0]+(self.mouse.relatives[0] // self.rsize),
+                       pos[1]+(self.mouse.relatives[1] // self.rsize))
+            dict_copy[new_pos] = v
+
+        return dict_copy
 
     def handle_events(self):
         # FIXME: cyclomatic complexity is too high
@@ -118,14 +132,10 @@ class Simulation:
             pygame.time.wait(self.waiting_time)
             self.solver.check_rules()
 
-        # FIXME: continue this and comment then refactor
+        # FIXME: continue, comment and refactor
         if self.start_superimpose:
             pos = self.grid.get_mouse_pos_grid(self.rsize)
-            dict_copy = dict()
-            for pos, v in self.data.items():
-                new_pos = (pos[0]+(self.mouse.relatives[0] // self.rsize),
-                           pos[1]+(self.mouse.relatives[1] // self.rsize))  # to comment
-                dict_copy[new_pos] = v
+            dict_copy = self.calculate_positions_relative_to_center()
             self.solver.add_new_rects(dict_copy)
             self.start_superimpose = False
 
@@ -136,8 +146,10 @@ class Simulation:
 
         self.grid.render(self.solver.rects, self.screen, (0, 255, 0))
 
-        self.screen.blit(self.cross_image, (self.center[0]-self.cross_image_center[0],
-                                            self.center[1]-self.cross_image_center[1]))
+        self.screen.blit(self.cross_image, (self.center[0]
+                                            - self.cross_image_center[0],
+                                            self.center[1]
+                                            - self.cross_image_center[1]))
         self.screen.blit(debug_info(f"{self.clock.get_fps():.1f}"), (10, 10))
 
         pygame.display.flip()
