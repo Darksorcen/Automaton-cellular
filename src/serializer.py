@@ -6,13 +6,14 @@ class Serializer:
         self.data = {}
         self.data_dumped = None
 
-    def convert_data(self, data: dict[tuple[int, int]: bool]):
+    def convert_data(self, data: dict[tuple[int, int]: bool], rsize: int):
         """
         Serialize the data
         ex : (60, 78) -> "60 78"
         """
         data_to_dump = dict()
 
+        data_to_dump["square_size"] = rsize
         data_to_dump["size"] = max(data.keys())
         data_to_dump["positions"] = dict()
 

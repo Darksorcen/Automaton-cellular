@@ -2,7 +2,7 @@ import itertools
 
 
 class ConwaySolver:
-    def __init__(self, screen_size, rsize):
+    def __init__(self, screen_size: tuple[int, int], rsize: int):
         # {(posx, posy): bool}
         self.rects = dict()
 

@@ -1,7 +1,7 @@
 import pygame
-import sys
 
 from src.debug_info import debug_info
+from src.mouse_state import MouseState
 from src.grid import Grid
 from src.conway_solver import ConwaySolver
 from src.serializer import Serializer
@@ -26,7 +26,7 @@ class Simulation:
 
         self.grid = Grid(self.SCREEN_SIZE, self.rsize)
 
-        # The grid is static, just draw it once
+        # The grid is static, we just draw it once
         self.grid_surf = self.grid.get_surf(self.SCREEN_SIZE, self.rsize)
 
         self.solver = ConwaySolver(self.SCREEN_SIZE, self.rsize)
@@ -41,14 +41,20 @@ class Simulation:
         self.serializer = Serializer()
         self.deserializer = Deserializer()
 
-        self.deserializer.read_json("data/simulation.json")
+        self.deserializer.read_json("assets/data/simulation.json")
         self.data = self.deserializer.deserialize()
 
         self.start_superimpose = False
 
+        self.mouse = MouseState(self.SCREEN_SIZE)
+
+        self.center = pygame.Rect(0, 0, *self.SCREEN_SIZE).center
+        self.cross_image = pygame.image.load("assets/images/little_cross.png")
+        self.cross_image_center = (5, 5)
+
     def after_process(self):
-        self.serializer.convert_data(self.solver.rects)
-        self.serializer.write_to_json("data/simulation.json")
+        self.serializer.convert_data(self.solver.rects, self.rsize)
+        self.serializer.write_to_json("assets/data/simulation.json")
 
     def handle_events(self):
         # FIXME: cyclomatic complexity is too high
@@ -67,7 +73,6 @@ class Simulation:
 
                 if event.key == pygame.K_o:
                     self.start_superimpose = True
-                    self.solver.add_new_rects(self.data)
 
             if event.type == pygame.MOUSEBUTTONDOWN and not self.started:
                 if event.button == 1:    # Left mouse button
@@ -99,6 +104,8 @@ class Simulation:
                     self.rmb_pressed = False
 
     def update(self):
+        self.mouse.update()
+
         if self.lmb_pressed:
             pos = self.grid.get_mouse_pos_grid(self.rsize)
             self.solver.rects[pos] = True
@@ -111,10 +118,16 @@ class Simulation:
             pygame.time.wait(self.waiting_time)
             self.solver.check_rules()
 
-        # FIXME: continue this
+        # FIXME: continue this and comment then refactor
         if self.start_superimpose:
             pos = self.grid.get_mouse_pos_grid(self.rsize)
-            # self.data.keys()[len(self.data.keys())//2]
+            dict_copy = dict()
+            for pos, v in self.data.items():
+                new_pos = (pos[0]+(self.mouse.relatives[0] // self.rsize),
+                           pos[1]+(self.mouse.relatives[1] // self.rsize))  # to comment
+                dict_copy[new_pos] = v
+            self.solver.add_new_rects(dict_copy)
+            self.start_superimpose = False
 
     def render(self):
         self.screen.fill((0, 0, 0))
@@ -123,6 +136,8 @@ class Simulation:
 
         self.grid.render(self.solver.rects, self.screen, (0, 255, 0))
 
+        self.screen.blit(self.cross_image, (self.center[0]-self.cross_image_center[0],
+                                            self.center[1]-self.cross_image_center[1]))
         self.screen.blit(debug_info(f"{self.clock.get_fps():.1f}"), (10, 10))
 
         pygame.display.flip()
