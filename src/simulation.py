@@ -1,25 +1,26 @@
 import pygame
 
-from src.debug_info import debug_info
 from src.mouse_state import MouseState
 from src.grid import Grid
 from src.conway_solver import ConwaySolver
 from src.serializer import Serializer
 from src.deserializer import Deserializer
+from src.gui import GUI
 
 pygame.init()
 
 
 class Simulation:
     def __init__(self):
-
         self.screen = pygame.display.set_mode((1080, 720))
 
         self.SCREEN_SIZE = self.screen.get_size()
         self.clock = pygame.time.Clock()
+        self.dt = 1/60  # in seconds
         self.running = True
 
         self.started = False
+        self.finished = False
         self.rsize = 10  # rect size
         self.rsize_min = 8
         self.rsize_max = 20
@@ -33,8 +34,6 @@ class Simulation:
 
         self.lmb_pressed = False
         self.rmb_pressed = False
-
-        self.finished = False
 
         self.waiting_time = 0
 
@@ -51,6 +50,8 @@ class Simulation:
         self.center = pygame.Rect(0, 0, *self.SCREEN_SIZE).center
         self.cross_image = pygame.image.load("assets/images/little_cross.png")
         self.cross_image_center = (5, 5)
+
+        self.gui = GUI(self.SCREEN_SIZE)
 
     def after_process(self):
         self.serializer.convert_data(self.solver.rects, self.rsize)
@@ -76,6 +77,8 @@ class Simulation:
             if event.type == pygame.QUIT:
                 self.running = False
                 pygame.display.quit()
+
+            self.gui.handle_events(event)
 
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
@@ -118,11 +121,18 @@ class Simulation:
                     self.rmb_pressed = False
 
     def update(self):
+        self.dt = self.clock.get_time()/1000
+
         self.mouse.update()
+        self.gui.update(self.dt)
 
         if self.lmb_pressed:
             pos = self.grid.get_mouse_pos_grid(self.rsize)
-            self.solver.rects[pos] = True
+            for hb in self.gui.hitboxes:
+                if hb.collidepoint(self.mouse.pos):
+                    break
+            else:
+                self.solver.rects[pos] = True
 
         if self.rmb_pressed:
             pos = self.grid.get_mouse_pos_grid(self.rsize)
@@ -139,6 +149,10 @@ class Simulation:
             self.solver.add_new_rects(dict_copy)
             self.start_superimpose = False
 
+        if self.gui.save_path != "":
+            self.serializer.convert_data(self.solver.rects, self.rsize)
+            self.serializer.write_to_json(self.gui.save_path)
+
     def render(self):
         self.screen.fill((0, 0, 0))
 
@@ -150,8 +164,8 @@ class Simulation:
                                             - self.cross_image_center[0],
                                             self.center[1]
                                             - self.cross_image_center[1]))
-        self.screen.blit(debug_info(f"{self.clock.get_fps():.1f}"), (10, 10))
 
+        self.gui.draw_ui(self.screen)
         pygame.display.flip()
 
     def run(self):

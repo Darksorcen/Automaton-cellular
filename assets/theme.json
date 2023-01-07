@@ -1,0 +1,26 @@
+{
+    "label":
+    {
+        "colours":
+        {
+            "dark_bg": "#00000000",
+            "normal_text": "#FF0000",
+            "text_shadow": "#505050"
+        },
+        "font":
+        {
+            "name": "arial",
+            "size": "30",
+            "bold": "0",
+            "italic": "0",
+            "regular_path": "assets/arial.ttf"
+        },
+        "misc":
+        {
+            "text_shadow": "0",
+            "text_shadow_size": "0",
+            "text_shadow_offset": "0,0"
+        }
+    }
+}
+
