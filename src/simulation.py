@@ -40,8 +40,7 @@ class Simulation:
         self.serializer = Serializer()
         self.deserializer = Deserializer()
 
-        self.deserializer.read_json("assets/data/glider_gun.json")
-        self.data = self.deserializer.deserialize()
+        self.data = dict()
 
         self.start_superimpose = False
 
@@ -52,6 +51,10 @@ class Simulation:
         self.cross_image_center = (5, 5)
 
         self.gui = GUI(self.SCREEN_SIZE)
+
+        # To not read/write everytime
+        self.old_save_path = self.gui.save_path
+        self.old_load_path = self.gui.load_path
 
     def after_process(self):
         self.serializer.convert_data(self.solver.rects, self.rsize)
@@ -126,9 +129,20 @@ class Simulation:
         self.mouse.update()
         self.gui.update(self.dt)
 
+        if self.gui.save_path != self.old_save_path:
+            self.serializer.convert_data(self.solver.rects, self.rsize)
+            self.serializer.write_to_json(self.gui.save_path)
+            self.old_save_path = self.gui.save_path
+            print("save")
+
+        if self.gui.load_path != self.old_load_path:
+            self.deserializer.read_json(self.gui.load_path)
+            self.data = self.deserializer.deserialize()
+            self.old_load_path = self.gui.load_path
+
         if self.lmb_pressed:
             pos = self.grid.get_mouse_pos_grid(self.rsize)
-            for hb in self.gui.hitboxes:
+            for hb in self.gui.hitboxes.values():
                 if hb.collidepoint(self.mouse.pos):
                     break
             else:
@@ -149,9 +163,6 @@ class Simulation:
             self.solver.add_new_rects(dict_copy)
             self.start_superimpose = False
 
-        if self.gui.save_path != "":
-            self.serializer.convert_data(self.solver.rects, self.rsize)
-            self.serializer.write_to_json(self.gui.save_path)
 
     def render(self):
         self.screen.fill((0, 0, 0))
