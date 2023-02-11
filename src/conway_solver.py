@@ -21,6 +21,23 @@ class ConwaySolver:
             if self.rects.get(pos, None) is not None:
                 self.rects[pos] = v | self.rects[pos]
 
+    # FIXME: regroup the two methods in two one
+    def add_new_rectsl(self, to_add: list[tuple[int, int]]) -> None:
+        """
+        Superimpose the rectangles
+        """
+        for pos in to_add:
+            if self.rects.get(pos, None) is not None:
+                self.rects[pos] = 1 | self.rects[pos]
+
+    def remove_rects(self, to_remove: list[tuple[int, int]]) -> None:
+        """
+        Remove the rectangles
+        """
+        for pos in to_remove:
+            if self.rects.get(pos, None) is not None:
+                self.rects[pos] = 0
+
     def check_rules(self) -> None:
         """
         Check the rules of Conway's Game of Life

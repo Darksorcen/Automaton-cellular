@@ -6,6 +6,8 @@ from src.conway_solver import ConwaySolver
 from src.serializer import Serializer
 from src.deserializer import Deserializer
 from src.gui import GUI
+from src.command import Command
+from src.command_history import CommandHistory
 
 pygame.init()
 
@@ -57,6 +59,8 @@ class Simulation:
         self.old_load_path = self.gui.load_path
 
         self.has_loaded_file = False
+
+        self.command_history = CommandHistory()
 
     def after_process(self) -> None:
         # self.serializer.convert_data(self.solver.rects, self.rsize)
@@ -112,6 +116,13 @@ class Simulation:
                 if event.key == pygame.K_o:
                     self.start_superimpose = True
 
+                if event.key == pygame.K_u:
+                    self.command_history.undoing = True
+
+            if event.type == pygame.KEYUP:
+                if event.key == pygame.K_u:
+                    self.command_history.undoing = False
+
             if event.type == pygame.MOUSEBUTTONDOWN and not self.started:
                 if event.button == 1:    # Left mouse button
                     self.lmb_pressed = True
@@ -141,6 +152,9 @@ class Simulation:
         self.mouse.update()
         self.gui.update(self.dt)
 
+        if self.command_history.undoing:
+            self.command_history.undo(self.solver)
+
         if self.gui.save_path != self.old_save_path:
             self.serializer.convert_data(self.solver.rects, self.rsize)
             self.serializer.write_to_json(self.gui.save_path)
@@ -155,6 +169,7 @@ class Simulation:
 
         if self.lmb_pressed:
             pos = self.grid.get_mouse_pos_grid(self.rsize)
+            self.command_history.add(Command("ADD", [pos]))
             for hb in self.gui.hitboxes.values():
                 if hb.collidepoint(self.mouse.pos):
                     break
@@ -163,6 +178,7 @@ class Simulation:
 
         if self.rmb_pressed:
             pos = self.grid.get_mouse_pos_grid(self.rsize)
+            self.command_history.add(Command("DEL", [pos]))
             self.solver.rects[pos] = False
 
         if self.started and not self.finished:
