@@ -56,11 +56,29 @@ class Simulation:
         self.old_save_path = self.gui.save_path
         self.old_load_path = self.gui.load_path
 
-    def after_process(self):
-        self.serializer.convert_data(self.solver.rects, self.rsize)
-        self.serializer.write_to_json("assets/data/simulation.json")
+        self.has_loaded_file = False
 
-    def calculate_positions_relative_to_center(self):
+    def after_process(self) -> None:
+        # self.serializer.convert_data(self.solver.rects, self.rsize)
+        # self.serializer.write_to_json("assets/data/simulation.json")
+        pass
+
+    def update_rsize(self) -> None:
+        """
+        If self.rsize changes self.grid also
+        """
+        self.grid.update(self.SCREEN_SIZE, self.rsize)
+        self.grid_surf = self.grid.get_surf(self.SCREEN_SIZE,
+                                            self.rsize)
+
+    def check_rsize(self, file_rsize: int) -> None:
+        print("Rsize", file_rsize, self.rsize)
+        if self.rsize != file_rsize:
+            self.rsize = file_rsize
+            self.update_rsize()
+
+    def calculate_positions_relative_to_center(self) \
+            -> dict[tuple[int, int]: bool]:
         """
         A method for calculating the new positions with respect to
         the actual mouse position
@@ -74,7 +92,7 @@ class Simulation:
 
         return dict_copy
 
-    def handle_events(self):
+    def handle_events(self) -> None:
         # FIXME: cyclomatic complexity is too high
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -104,18 +122,12 @@ class Simulation:
                 # Mouse wheel up
                 if event.button == 4 and self.rsize < self.rsize_max:
                     self.rsize += 1
-
-                    self.grid.update(self.SCREEN_SIZE, self.rsize)
-                    self.grid_surf = self.grid.get_surf(self.SCREEN_SIZE,
-                                                        self.rsize)
+                    self.update_rsize()
 
                 # Mouse wheel down
                 elif event.button == 5 and self.rsize > self.rsize_min:
                     self.rsize -= 1
-
-                    self.grid.update(self.SCREEN_SIZE, self.rsize)
-                    self.grid_surf = self.grid.get_surf(self.SCREEN_SIZE,
-                                                        self.rsize)
+                    self.update_rsize()
 
             if event.type == pygame.MOUSEBUTTONUP and not self.started:
                 if event.button == 1:
@@ -133,12 +145,13 @@ class Simulation:
             self.serializer.convert_data(self.solver.rects, self.rsize)
             self.serializer.write_to_json(self.gui.save_path)
             self.old_save_path = self.gui.save_path
-            print("save")
 
         if self.gui.load_path != self.old_load_path:
             self.deserializer.read_json(self.gui.load_path)
-            self.data = self.deserializer.deserialize()
+            self.data, file_rsize = self.deserializer.deserialize()
+            self.check_rsize(file_rsize)
             self.old_load_path = self.gui.load_path
+            self.has_loaded_file = True
 
         if self.lmb_pressed:
             pos = self.grid.get_mouse_pos_grid(self.rsize)
@@ -157,17 +170,21 @@ class Simulation:
             self.solver.check_rules()
 
         # FIXME: continue, comment and refactor
+        # "Add" the rects from the loaded file to the screen
         if self.start_superimpose:
-            pos = self.grid.get_mouse_pos_grid(self.rsize)
             dict_copy = self.calculate_positions_relative_to_center()
             self.solver.add_new_rects(dict_copy)
             self.start_superimpose = False
-
 
     def render(self):
         self.screen.fill((0, 0, 0))
 
         self.screen.blit(self.grid_surf, (0, 0))
+
+        if self.has_loaded_file:
+            # 'Transparent' rects
+            dict_copy = self.calculate_positions_relative_to_center()
+            self.grid.render(dict_copy, self.screen, (0, 150, 0))
 
         self.grid.render(self.solver.rects, self.screen, (0, 255, 0))
 
@@ -177,6 +194,7 @@ class Simulation:
                                             - self.cross_image_center[1]))
 
         self.gui.draw_ui(self.screen)
+
         pygame.display.flip()
 
     def run(self):

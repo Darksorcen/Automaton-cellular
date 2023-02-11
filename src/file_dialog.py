@@ -52,7 +52,6 @@ class FileDialog:
 
     def get_hitbox(self):
         if self.visible:
-            print("I am visible", self.title)
             return self.rect
         return pygame.Rect(0, 0, 0, 0)
 

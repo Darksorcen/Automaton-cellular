@@ -8,7 +8,7 @@ class Grid:
         self.size = tuple()
         self.update(screen_size, rsize)
 
-    def generation(self, rsize: int):
+    def generation(self, rsize: int) -> None:
         """
         Generate a grid of rects
         """

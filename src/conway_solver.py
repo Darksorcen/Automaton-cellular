@@ -13,7 +13,7 @@ class ConwaySolver:
         self.permutations = list(itertools.permutations((0, 1, -1), 2))
         self.permutations += [(1, 1), (-1, -1)]
 
-    def add_new_rects(self, to_add: dict[tuple[int, int]: bool]):
+    def add_new_rects(self, to_add: dict[tuple[int, int]: bool]) -> None:
         """
         Superimpose the rectangles
         """
@@ -21,7 +21,7 @@ class ConwaySolver:
             if self.rects.get(pos, None) is not None:
                 self.rects[pos] = v | self.rects[pos]
 
-    def check_rules(self):
+    def check_rules(self) -> None:
         """
         Check the rules of Conway's Game of Life
         """

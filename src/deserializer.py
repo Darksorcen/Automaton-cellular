@@ -14,7 +14,9 @@ class Deserializer:
         for pos, v in self.data_to_deserialize.get("positions", {}).items():
             self.data_deserialized[tuple(map(int, pos.split()))] = v
 
-        return self.data_deserialized
+        rsize = self.data_to_deserialize.get("square_size", 0)
+
+        return self.data_deserialized, rsize
 
     def read_json(self, filename: str):
         """
